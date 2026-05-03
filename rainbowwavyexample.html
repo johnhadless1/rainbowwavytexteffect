@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  /* 1. Core Animation Styles */
+  .wavy-text {
+    font-size: 68px;
+    font-weight: 900;
+    font-family: 'Arial Black', 'Impact', sans-serif;
+    white-space: nowrap;
+    line-height: 1.6;
+    letter-spacing: 2px;
+    display: inline-block;
+  }
+
+  .wavy-text span {
+    display: inline-block;
+    background-image: linear-gradient(to right,
+      #ff0000, #ff8800, #ffee00, #00dd66, #00aaff, #aa00ff, #ff0088, #ff0000
+    );
+    background-size: var(--word-width, 600px) 100%;
+    background-position-x: var(--bg-offset-x, 0px);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation:
+      wave var(--dur, 1s) ease-in-out infinite,
+      grad-shift var(--grad-dur, 3s) linear infinite;
+    animation-delay: var(--wave-delay, 0s), 0s;
+  }
+
+  @keyframes wave {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(var(--wave-height, -22px)); }
+  }
+
+  @keyframes grad-shift {
+    from { background-position-x: var(--bg-offset-x, 0px); }
+    to   { background-position-x: calc(var(--bg-offset-x, 0px) - var(--word-width, 600px)); }
+  }
+
+  /* Demo Styling Only */
+  body { font-family: system-ui, sans-serif; padding: 2rem; background: #f4f4f4; }
+  .demo-container { display: flex; flex-direction: column; gap: 3rem; align-items: center; }
+  .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="demo-container">
+  
+  <!-- Example 1: Standard Usage -->
+  <div class="card">
+    <h1 class="wavy-text">RAINBOW WAVE</h1>
+    <p>Standard implementation</p>
+  </div>
+
+  <!-- Example 2: Customizing via Inline Styles -->
+  <div class="card">
+    <div class="wavy-text" style="--dur: 0.5s; --wave-height: -10px; font-size: 32px;">
+      FAST & SMALL WAVE
+    </div>
+    <p>Custom speed and height using CSS variables</p>
+  </div>
+
+  <!-- Example 3: Multiple instances in a sentence -->
+  <div class="card">
+    <p>Check out this <span class="wavy-text" style="font-size: 24px; --grad-dur: 1s;">AWESOME</span> effect!</p>
+  </div>
+
+</div>
+
+<script>
+/**
+ * WavyText Engine
+ * Automatically finds all elements with .wavy-text, 
+ * splits them into spans, and calculates the gradient offsets.
+ */
+const WavyText = {
+  init() {
+    const elements = document.querySelectorAll('.wavy-text');
+    elements.forEach(el => this.apply(el));
+    
+    // Observe for dynamically added elements (useful for blog posts/AJAX)
+    const observer = new MutationObserver(mutations => {
+      mutations.forEach(mutation => {
+        mutation.addedNodes.forEach(node => {
+          if (node.nodeType === 1 && node.classList.contains('wavy-text')) {
+            this.apply(node);
+          }
+          if (node.nodeType === 1 && node.querySelectorAll) {
+            node.querySelectorAll('.wavy-text').forEach(child => this.apply(child));
+          }
+        });
+      });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  },
+
+  apply(el) {
+    // Avoid double processing
+    if (el.dataset.wavyInitialized) return;
+
+    const text = el.textContent.trim();
+    const STAGGER = 0.08;
+
+    // Split text into spans
+    el.innerHTML = [...text].map((c, i) =>
+      `<span data-i="${i}">${c === ' ' ? '\u00a0' : c}</span>`
+    ).join('');
+
+    // Need a frame to ensure DOM is rendered to get widths
+    requestAnimationFrame(() => {
+      const pr = el.getBoundingClientRect();
+      const ww = pr.width;
+      
+      el.querySelectorAll('span').forEach((s, i) => {
+        const r = s.getBoundingClientRect();
+        const ox = r.left - pr.left;
+        
+        s.style.setProperty('--word-width', `${ww}px`);
+        s.style.setProperty('--bg-offset-x', `${-ox}px`);
+        s.style.setProperty('--wave-delay', `${i * STAGGER}s`);
+      });
+      el.dataset.wavyInitialized = "true";
+    });
+  }
+};
+
+// Start the engine
+WavyText.init();
+</script>
+
+</body>
+</html>
